@@ -1,6 +1,7 @@
 package com.nada.tp1;
 
-import ht.fds.mbds.nada.service.GenerateurReponse;
+import com.nada.tp1.llm.JsonAdapterPourGemini;   // MODIF TP1 (remplace l'import de GenerateurReponse)
+import com.nada.tp1.llm.LlmInteraction;           // AJOUT TP1
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.model.SelectItem;
@@ -10,6 +11,7 @@ import jakarta.inject.Named;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;                          // AJOUT TP1
 import java.util.List;
 
 /**
@@ -51,11 +53,28 @@ public class Bb implements Serializable {
      */
     private StringBuilder conversation = new StringBuilder();
 
+    // AJOUT TP1 : début
     /**
-     * Service pour modifier la question et générer la réponse.
+     * Mode debug : affiche ou non le JSON des requêtes et réponses.
+     */
+    private boolean debug;
+
+    /**
+     * JSON de la dernière requête envoyée au LLM.
+     */
+    private String texteRequeteJson;
+
+    /**
+     * JSON de la dernière réponse du LLM.
+     */
+    private String texteReponseJson;
+    // AJOUT TP1 : fin
+
+    /**
+     * Adapter qui prépare le JSON et appelle l'API du LLM.
      */
     @Inject
-    private GenerateurReponse generateurReponse;
+    private JsonAdapterPourGemini jsonAdapter;    // MODIF TP1 (remplace generateurReponse)
 
     /**
      * Contexte JSF. Utilisé pour qu'un message d'erreur s'affiche dans le formulaire.
@@ -110,11 +129,35 @@ public class Bb implements Serializable {
         this.conversation = new StringBuilder(conversation);
     }
 
+    // AJOUT TP1 : début
+    public boolean isDebug() {
+        return debug;
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+    }
+
+    public String getTexteRequeteJson() {
+        return texteRequeteJson;
+    }
+
+    public void setTexteRequeteJson(String texteRequeteJson) {
+        this.texteRequeteJson = texteRequeteJson;
+    }
+
+    public String getTexteReponseJson() {
+        return texteReponseJson;
+    }
+
+    public void setTexteReponseJson(String texteReponseJson) {
+        this.texteReponseJson = texteReponseJson;
+    }
+    // AJOUT TP1 : fin
+
     /**
      * Envoie la question au serveur.
-     * En attendant de l'envoyer à un LLM, le serveur fait un traitement quelconque, juste pour tester :
-     * Le traitement consiste à copier la question en minuscules et à l'entourer avec "||". Le rôle système
-     * est ajouté au début de la première réponse.
+     * Le serveur envoie la question à l'API du LLM et récupère sa réponse.
      *
      * @return null pour rester sur la même page.
      */
@@ -131,8 +174,24 @@ public class Bb implements Serializable {
         if (this.conversation.isEmpty()) { // Si la conversation n'a pas encore commencé
             // Fige la liste déroulante qui permet de choisir le rôle système
             this.roleSystemeChangeable = false;
+            // MODIF TP1 : envoie le rôle système à l'adapter
+            jsonAdapter.setSystemRole(this.roleSysteme);
         }
-        this.reponse = this.generateurReponse.genererReponse(this.question, this.roleSysteme);
+
+        // MODIF TP1 : remplace l'appel à generateurReponse.genererReponse(...)
+        try {
+            LlmInteraction interaction = jsonAdapter.envoyerRequete(question);
+            this.reponse = interaction.reponseExtraite();
+            this.texteRequeteJson = interaction.questionJson();
+            this.texteReponseJson = interaction.reponseJson();
+        } catch (Exception e) {
+            this.reponse = "Erreur : " + e.getMessage();
+            FacesMessage message =
+                    new FacesMessage(FacesMessage.SEVERITY_ERROR,
+                            "Problème de connexion avec l'API du LLM",
+                            "Problème de connexion avec l'API du LLM" + e.getMessage() + "\n" + Arrays.toString(e.getStackTrace()));
+            facesContext.addMessage(null, message);
+        }
 
         // La conversation contient l'historique des questions-réponses depuis le début.
         afficherConversation();

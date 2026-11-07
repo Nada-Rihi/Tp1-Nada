@@ -53,7 +53,35 @@
                         </h:panelGroup>
                         <h:inputTextarea id="reponse" value="#{bb.reponse}" title="Réponse"
                                          cols="50" rows="15"/>
+
+                        <!-- AJOUT TP1 : toggleSwitch du mode debug (fin du panel questionetreponse) -->
+                        <p:outputPanel style="display:flex; align-items: center; gap: 10px">
+                            <h:outputText value="Mode debug : "/>
+                            <p:toggleSwitch id="debugSwitch" value="#{bb.debug}" styleClass="mb-2" label="Mode debug">
+                                <p:ajax update="form:debugPanel"/>
+                            </p:toggleSwitch>
+                            <p:tooltip for="debugSwitch"
+                                       value="Active ou non l'affichage du JSON sur les requêtes et réponses du LLM." />
+                        </p:outputPanel>
                     </h:panelGrid>
+
+                    <!-- AJOUT TP1 : panel debug, juste après le panel questionetreponse -->
+                    <h:panelGroup id="debugPanel">
+                        <h:panelGrid columns="1" rendered="#{bb.debug}">
+                            <h:panelGroup>
+                                <h:outputText value="JSON de la requête :"/>
+                                <button type="button" onclick="copyToClipboard('texteRequeteJson')">Copier requête JSON</button>
+                            </h:panelGroup>
+                            <h:inputTextarea id="texteRequeteJson" value="#{bb.texteRequeteJson}"
+                                             title="JSON de la requête" cols="50" rows="10" readonly="true"/>
+                            <h:panelGroup>
+                                <h:outputText value="JSON de la réponse :"/>
+                                <button type="button" onclick="copyToClipboard('texteReponseJson')">Copier réponse JSON</button>
+                            </h:panelGroup>
+                            <h:inputTextarea id="texteReponseJson" value="#{bb.texteReponseJson}"
+                                             title="JSON de la réponse" cols="50" rows="10" readonly="true"/>
+                        </h:panelGrid>
+                    </h:panelGroup>
 
                 </h:panelGrid>
                 <h:panelGrid id="paneldroit" columns="1" style="vertical-align: top;">
